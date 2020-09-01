@@ -86,7 +86,7 @@ func reviewValueName(name string) {
 	if len(name) < 1 {
 		return
 	}
-	words := GetWordList(name)
+	// words := GetWordList(name)
 
 }
 
@@ -102,6 +102,15 @@ func GetWordList(name string) []string{
 	words = append(words, strings.ToLower(name[wordStartIndex:len(name)]))
 
 	return words
+}
+
+func IsVerb(word string) bool {
+	types, ok := wordDict[word]
+	if !ok {
+		return true
+	}
+	_, ok = types["v"]
+	return ok
 }
 
 func IsPlural(word string) bool{

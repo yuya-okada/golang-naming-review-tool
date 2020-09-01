@@ -26,6 +26,17 @@ func TestGetWordList(t *testing.T) {
 	}
 }
 
+func TestIsVerb(t *testing.T) {
+	ans := golang_naming_review_tool.IsVerb("play")
+	if !ans {
+		t.Errorf("play is verb = %t; want true", ans)
+	}
+	ans = golang_naming_review_tool.IsVerb("pineapple")
+	if ans {
+		t.Errorf("pineapple is verb = %t; want false", ans)
+	}
+}
+
 func TestIsPlural(t *testing.T) {
 	ans := golang_naming_review_tool.IsPlural("apple")
 	if ans {
