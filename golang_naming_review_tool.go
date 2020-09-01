@@ -8,12 +8,14 @@ import (
 	"golang.org/x/tools/go/analysis/passes/inspect"
 	"io/ioutil"
 	"os"
+	"strings"
+	"unicode"
 )
 
 const dictionaryFileName = "dictionary.json"
 const doc = "go_naming_review is ..."
 
-var words map[string]map[string]bool
+var wordDict map[string]map[string]bool
 
 
 // Analyzer is ...
@@ -46,7 +48,7 @@ func loadDictionary(fileName string) map[string]map[string]bool {
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
-	words = loadDictionary(dictionaryFileName)
+	wordDict = loadDictionary(dictionaryFileName)
 
 	for _, f := range pass.Files {
 		for _, decl := range f.Decls {
@@ -84,11 +86,26 @@ func reviewValueName(name string) {
 	if len(name) < 1 {
 		return
 	}
+	words := GetWordList(name)
 
 }
 
-func isPlural(word string) bool{
-	val, ok := words[word];
+func GetWordList(name string) []string{
+	var words []string
+	wordStartIndex := 0
+	for i, c := range name {
+		if unicode.IsUpper(c) && i!= wordStartIndex{
+			words = append(words, strings.ToLower(name[wordStartIndex:i]))
+			wordStartIndex=i
+		}
+	}
+	words = append(words, strings.ToLower(name[wordStartIndex:len(name)]))
+
+	return words
+}
+
+func IsPlural(word string) bool{
+	val, ok := wordDict[word]
 	if ok {
 		isPl, ok := val["pl"]
 		if !ok {
@@ -97,6 +114,6 @@ func isPlural(word string) bool{
 
 		return isPl
 	} else {
-		return word[-1] ==  's'
+		return word[len(word)-1] ==  's'
 	}
 }
