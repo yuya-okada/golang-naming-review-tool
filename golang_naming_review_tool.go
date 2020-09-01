@@ -104,14 +104,24 @@ func GetWordList(name string) []string{
 	return words
 }
 
-func IsVerb(word string) bool {
+
+func isSpecificPartOfSpeech(word string, partOfSpeech string) bool {
+
 	types, ok := wordDict[word]
 	if !ok {
 		return true
 	}
-	_, ok = types["v"]
+	_, ok = types[partOfSpeech]
 	return ok
 }
+
+func IsNoun(word string) bool {
+	return isSpecificPartOfSpeech(word, "n")
+}
+func IsVerb(word string) bool {
+	return isSpecificPartOfSpeech(word, "v")
+}
+
 
 func IsPlural(word string) bool{
 	val, ok := wordDict[word]

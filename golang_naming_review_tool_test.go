@@ -37,6 +37,22 @@ func TestIsVerb(t *testing.T) {
 	}
 }
 
+func TestIsNoun(t *testing.T) {
+	ans := golang_naming_review_tool.IsNoun("understand")
+	if ans {
+		t.Errorf("understand is noun = %t; want false", ans)
+	}
+	ans = golang_naming_review_tool.IsNoun("pineapple")
+	if !ans {
+		t.Errorf("pineapple is noun = %t; want true", ans)
+	}
+	ans = golang_naming_review_tool.IsNoun("understanding")
+	if !ans {
+		t.Errorf("understanding is noun = %t; want true", ans)
+	}
+}
+
+
 func TestIsPlural(t *testing.T) {
 	ans := golang_naming_review_tool.IsPlural("apple")
 	if ans {
