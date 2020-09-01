@@ -86,3 +86,17 @@ func reviewValueName(name string) {
 	}
 
 }
+
+func isPlural(word string) bool{
+	val, ok := words[word];
+	if ok {
+		isPl, ok := val["pl"]
+		if !ok {
+			isPl = false
+		}
+
+		return isPl
+	} else {
+		return word[-1] ==  's'
+	}
+}

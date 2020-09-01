@@ -13,3 +13,6 @@ func TestAnalyzer(t *testing.T) {
 	analysistest.Run(t, testdata, golang_naming_review_tool.Analyzer, "a")
 }
 
+func TestIsPlural(t *testing.T) {
+
+}
