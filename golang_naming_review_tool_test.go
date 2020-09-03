@@ -26,27 +26,17 @@ func TestGetWordList(t *testing.T) {
 	}
 }
 
-func TestIsVerb(t *testing.T) {
-	ans := golang_naming_review_tool.IsVerb("play")
-	if !ans {
-		t.Errorf("play is verb = %t; want true", ans)
-	}
-	ans = golang_naming_review_tool.IsVerb("pineapple")
-	if ans {
-		t.Errorf("pineapple is verb = %t; want false", ans)
-	}
-}
 
-func TestIsNoun(t *testing.T) {
-	ans := golang_naming_review_tool.IsNoun("understand")
+func TestisSpecificPartOfSpeech(t *testing.T) {
+	ans := golang_naming_review_tool.IsSpecificPartOfSpeech("understand", "n")
 	if ans {
 		t.Errorf("understand is noun = %t; want false", ans)
 	}
-	ans = golang_naming_review_tool.IsNoun("pineapple")
+	ans = golang_naming_review_tool.IsSpecificPartOfSpeech("pineapple", "n")
 	if !ans {
 		t.Errorf("pineapple is noun = %t; want true", ans)
 	}
-	ans = golang_naming_review_tool.IsNoun("understanding")
+	ans = golang_naming_review_tool.IsSpecificPartOfSpeech("understanding", "n")
 	if !ans {
 		t.Errorf("understanding is noun = %t; want true", ans)
 	}

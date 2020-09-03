@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"go/ast"
+	"go/token"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
+	"golang.org/x/tools/go/ast/inspector"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -17,6 +19,15 @@ const doc = "go_naming_review is ..."
 
 var wordDict map[string]map[string]bool
 
+func NewNamingError(text string) error {
+	return &NamingError{text}
+}
+type NamingError struct {
+	s string
+}
+func (e *NamingError) Error() string {
+	return e.s
+}
 
 // Analyzer is ...
 var Analyzer = &analysis.Analyzer{
@@ -26,6 +37,36 @@ var Analyzer = &analysis.Analyzer{
 	Requires: []*analysis.Analyzer{
 		inspect.Analyzer,
 	},
+}
+
+func run(pass *analysis.Pass) (interface{}, error) {
+	wordDict = loadDictionary(dictionaryFileName)
+
+	inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	nodeFilter := []ast.Node{
+		(*ast.GenDecl)(nil),
+		(*ast.AssignStmt)(nil),
+	}
+	inspect.Preorder(nodeFilter, func(n ast.Node) {
+		switch n := n.(type) {
+		case *ast.GenDecl:
+			reviewGenDecl(pass, n)
+		case *ast.AssignStmt:
+			reviewAssignStmt(pass, n)
+		}
+
+	})
+
+	//
+	//for _, f := range pass.Files {
+	//	for _, decl := range f.Decls {
+	//		decl, ok := decl.(*ast.GenDecl)
+	//		if ok {
+	//			reviewGenDecl(pass, decl)
+	//		}
+	//	}
+	//}
+	return nil, nil
 }
 
 func printIfError(err error) {
@@ -47,47 +88,64 @@ func loadDictionary(fileName string) map[string]map[string]bool {
 	return words
 }
 
-func run(pass *analysis.Pass) (interface{}, error) {
-	wordDict = loadDictionary(dictionaryFileName)
 
-	for _, f := range pass.Files {
-		for _, decl := range f.Decls {
-			decl, ok := decl.(*ast.GenDecl)
+func reviewAssignStmt(pass *analysis.Pass, statement *ast.AssignStmt) {
+	if statement.Tok == token.DEFINE {
+		for _, expr := range statement.Lhs {
+			id, ok := expr.(*ast.Ident)
 			if ok {
-				reviewGenDecl(decl)
+				error := reviewVariableName(id.Name)
+				if error != nil {
+					pass.Reportf(id.Pos(), error.Error())
+				}
 			}
-
-
 		}
 	}
-
-	return nil, nil
 }
 
 
-func reviewGenDecl(decl *ast.GenDecl) {
+func reviewGenDecl(pass *analysis.Pass, decl *ast.GenDecl) {
 	for _, spec := range decl.Specs {
-		reviewSpec(spec)
+		reviewSpec(pass, spec)
 	}
 }
 
-func reviewSpec(spec ast.Spec) {
+func reviewSpec(pass *analysis.Pass, spec ast.Spec) {
 	valSpec, ok := spec.(*ast.ValueSpec)
 	if ok {
 		for _, id := range valSpec.Names {
 			if id.Name != "_" {
-				reviewValueName(id.Name)
+				error := reviewVariableName(id.Name)
+				if error != nil {
+					pass.Reportf(id.Pos(), error.Error())
+				}
 			}
 		}
 	}
 }
 
-func reviewValueName(name string) {
+func reviewVariableName(name string) error{
 	if len(name) < 1 {
-		return
+		return nil
 	}
-	// words := GetWordList(name)
+	words := GetWordList(name)
 
+	// The first word in the variable name should be a noun or an adjective
+	if !(IsNoun(words[0]) || IsAdjective(words[0])) {
+		return NewNamingError("Variable name should start with a noun or an adjective")
+	}
+
+	// Check variable whether name contains at least one noun
+	nounContainsNoun := false
+	for _, word := range words {
+		if IsNoun(word) {
+			nounContainsNoun = true
+		}
+	}
+	if !nounContainsNoun {
+		return NewNamingError("Variable name should contain at least one noun")
+	}
+	return nil
 }
 
 func GetWordList(name string) []string{
@@ -105,7 +163,7 @@ func GetWordList(name string) []string{
 }
 
 
-func isSpecificPartOfSpeech(word string, partOfSpeech string) bool {
+func IsSpecificPartOfSpeech(word string, partOfSpeech string) bool {
 
 	types, ok := wordDict[word]
 	if !ok {
@@ -116,11 +174,19 @@ func isSpecificPartOfSpeech(word string, partOfSpeech string) bool {
 }
 
 func IsNoun(word string) bool {
-	return isSpecificPartOfSpeech(word, "n")
+	return IsSpecificPartOfSpeech(word, "n")
 }
 func IsVerb(word string) bool {
-	return isSpecificPartOfSpeech(word, "v")
+	return IsSpecificPartOfSpeech(word, "v")
 }
+func IsVerbBareForm(word string) bool {
+	return IsSpecificPartOfSpeech(word, "vb")
+}
+func IsAdjective(word string) bool {
+	return IsSpecificPartOfSpeech(word, "a") || IsVerbBareForm(word)
+}
+
+
 
 
 func IsPlural(word string) bool{
