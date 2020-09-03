@@ -6,6 +6,7 @@ import (
 	pluralizePkg "github.com/gertd/go-pluralize"
 	"go/ast"
 	"go/token"
+	"go/types"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
 	"golang.org/x/tools/go/ast/inspector"
@@ -98,7 +99,7 @@ func reviewAssignStmt(pass *analysis.Pass, statement *ast.AssignStmt) {
 		for _, expr := range statement.Lhs {
 			id, ok := expr.(*ast.Ident)
 			if ok {
-				error := reviewVariableName(id.Name)
+				error := reviewVariableName(pass, id)
 				if error != nil {
 					pass.Reportf(id.Pos(), error.Error())
 				}
@@ -120,7 +121,7 @@ func reviewSpec(pass *analysis.Pass, spec ast.Spec) {
 	if ok {
 		for _, id := range valSpec.Names {
 			if id.Name != "_" {
-				error := reviewVariableName(id.Name)
+				error := reviewVariableName(pass, id)
 				if error != nil {
 					pass.Reportf(id.Pos(), error.Error())
 				}
@@ -129,7 +130,13 @@ func reviewSpec(pass *analysis.Pass, spec ast.Spec) {
 	}
 }
 
-func reviewVariableName(name string) error{
+func reviewVariableName(pass *analysis.Pass,id *ast.Ident) error{
+	if id == nil {
+		return nil
+	}
+	name := id.Name
+	obj := pass.TypesInfo.ObjectOf(id)
+
 	// Single-character words are allowed (Using in large scope is deprecated)
 	if len(name) < 1 {
 		return nil
@@ -141,16 +148,39 @@ func reviewVariableName(name string) error{
 		return NewNamingError("Variable name should start with a noun or an adjective")
 	}
 
+	finalNoun := ""
 	// Check variable whether name contains at least one noun
 	nounContainsNoun := false
 	for _, word := range words {
 		if IsNoun(word) {
 			nounContainsNoun = true
+			finalNoun = word
 		}
 	}
 	if !nounContainsNoun {
 		return NewNamingError("Variable name should contain at least one noun")
 	}
+
+
+	// The final noun in the name of Array or Slice must be plural
+	// On the contrary, the final noun NOT in the name of Array or Slice must be singular
+	// For the name of Map, they don't matter
+	if obj != nil {
+		_, isSlice := obj.Type().(*types.Slice)
+		_, isArray := obj.Type().(*types.Array)
+		_, isMap := obj.Type().(*types.Map)
+		if !isMap {
+			if isSlice || isArray {
+				if  !pluralize.IsPlural(finalNoun){
+					return NewNamingError("The final noun in the name of Array or Slice must be plural")
+				}
+			} else if !pluralize.IsSingular(finalNoun) {
+				return NewNamingError("The final noun not in the name of Array or Slice must be singular")
+			}
+		}
+	}
+
+
 	return nil
 }
 
