@@ -42,26 +42,3 @@ func TestisSpecificPartOfSpeech(t *testing.T) {
 	}
 }
 
-
-func TestIsPlural(t *testing.T) {
-	ans := golang_naming_review_tool.IsPlural("apple")
-	if ans {
-		t.Errorf("apples is plural = %t; want false", ans)
-	}
-	ans = golang_naming_review_tool.IsPlural("apples")
-	if !ans {
-		t.Errorf("apples is plural = %t; want true", ans)
-	}
-	ans = golang_naming_review_tool.IsPlural("children")
-	if !ans {
-		t.Errorf("children is plural = %t; want true", ans)
-	}
-	ans = golang_naming_review_tool.IsPlural("foobar")
-	if ans {
-		t.Errorf("foobar is plural = %t; want false", ans)
-	}
-	ans = golang_naming_review_tool.IsPlural("foobars")
-	if !ans {
-		t.Errorf("foobars is plural = %t; want true", ans)
-	}
-}

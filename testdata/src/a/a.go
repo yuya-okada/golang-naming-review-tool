@@ -9,6 +9,7 @@ func f() {
 	eatApple:=0		// want "Variable name should start with a noun or an adjective"
 	appleContains:=0
 	abandoningMan:=0
+
 	print(beautifulBeautiful, eatApple, appleContains, abandoningMan)
 
 	var gopher int

@@ -3,6 +3,7 @@ package golang_naming_review_tool
 import (
 	"encoding/json"
 	"fmt"
+	pluralizePkg "github.com/gertd/go-pluralize"
 	"go/ast"
 	"go/token"
 	"golang.org/x/tools/go/analysis"
@@ -16,6 +17,7 @@ import (
 
 const dictionaryFileName = "dictionary.json"
 const doc = "go_naming_review is ..."
+var pluralize = pluralizePkg.NewClient()
 
 var wordDict map[string]map[string]bool
 
@@ -125,6 +127,7 @@ func reviewSpec(pass *analysis.Pass, spec ast.Spec) {
 }
 
 func reviewVariableName(name string) error{
+	// A single-character word is allowed (Using in large scope is deprecated)
 	if len(name) < 1 {
 		return nil
 	}
@@ -149,6 +152,7 @@ func reviewVariableName(name string) error{
 }
 
 func GetWordList(name string) []string{
+
 	var words []string
 	wordStartIndex := 0
 	for i, c := range name {
@@ -164,6 +168,9 @@ func GetWordList(name string) []string{
 
 
 func IsSpecificPartOfSpeech(word string, partOfSpeech string) bool {
+	if pluralize.IsPlural(word) {
+		word = pluralize.Singular(word)
+	}
 
 	types, ok := wordDict[word]
 	if !ok {
@@ -187,18 +194,3 @@ func IsAdjective(word string) bool {
 }
 
 
-
-
-func IsPlural(word string) bool{
-	val, ok := wordDict[word]
-	if ok {
-		isPl, ok := val["pl"]
-		if !ok {
-			isPl = false
-		}
-
-		return isPl
-	} else {
-		return word[len(word)-1] ==  's'
-	}
-}
