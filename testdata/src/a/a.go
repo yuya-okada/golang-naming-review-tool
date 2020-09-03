@@ -4,7 +4,7 @@ package a
 var beautifulBeautiful int	// want "Variable name should contain at least one noun"
 var eatApple =0		// want "Variable name should start with a noun or an adjective"
 
-func f() {
+func main() {
 	beautifulBeautiful := 0	// want "Variable name should contain at least one noun"
 	eatApple:=0		// want "Variable name should start with a noun or an adjective"
 	appleContains:=0
@@ -16,3 +16,10 @@ func f() {
 	print(gopher)
 }
 
+func playBaseball() {
+	return
+}
+
+func baseball () {	// want "Function name should start with a verb"
+	return
+}

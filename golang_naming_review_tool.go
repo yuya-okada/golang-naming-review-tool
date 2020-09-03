@@ -59,15 +59,17 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 	})
 
-	//
-	//for _, f := range pass.Files {
-	//	for _, decl := range f.Decls {
-	//		decl, ok := decl.(*ast.GenDecl)
-	//		if ok {
-	//			reviewGenDecl(pass, decl)
-	//		}
-	//	}
-	//}
+	nodeFilter = []ast.Node{
+		(*ast.FuncDecl)(nil),
+	//	(*ast.FuncLit)(nil),
+	}
+	inspect.Preorder(nodeFilter, func(n ast.Node) {
+		switch n := n.(type) {
+		case *ast.FuncDecl:
+			reviewFuncDecl(pass, n)
+		}
+	})
+
 	return nil, nil
 }
 
@@ -113,6 +115,7 @@ func reviewGenDecl(pass *analysis.Pass, decl *ast.GenDecl) {
 }
 
 func reviewSpec(pass *analysis.Pass, spec ast.Spec) {
+	// TODO: 変数以外の場合
 	valSpec, ok := spec.(*ast.ValueSpec)
 	if ok {
 		for _, id := range valSpec.Names {
@@ -127,7 +130,7 @@ func reviewSpec(pass *analysis.Pass, spec ast.Spec) {
 }
 
 func reviewVariableName(name string) error{
-	// A single-character word is allowed (Using in large scope is deprecated)
+	// Single-character words are allowed (Using in large scope is deprecated)
 	if len(name) < 1 {
 		return nil
 	}
@@ -149,6 +152,23 @@ func reviewVariableName(name string) error{
 		return NewNamingError("Variable name should contain at least one noun")
 	}
 	return nil
+}
+
+
+func reviewFuncDecl(pass *analysis.Pass, decl *ast.FuncDecl) {
+	if decl.Name == nil || decl.Name.Name == "" {
+		return
+	}
+	name := decl.Name.Name
+	if name == "main" || name == "init" {
+		return
+	}
+	words := GetWordList(name)
+
+	if !IsVerb(words[0]) {
+		error := NewNamingError("Function name should start with a verb")
+		pass.Reportf(decl.Pos(), error.Error())
+	}
 }
 
 func GetWordList(name string) []string{
