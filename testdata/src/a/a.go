@@ -26,6 +26,7 @@ func playBaseball(beautifulBeautiful int) { // want "The variable name should co
 	return
 }
 
-func baseball () {	// want "Function name should start with a verb"
+func max () {	// want "The function name should start with a verb"
 	return
 }
+

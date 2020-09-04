@@ -17,6 +17,8 @@ import (
 )
 
 const dictionaryFileName = "dictionary.json"
+const codingWordDictionaryFileName = "coding_word_dictionary.json"
+
 const doc = "go_naming_review is ..."
 var pluralize = pluralizePkg.NewClient()
 
@@ -43,7 +45,7 @@ var Analyzer = &analysis.Analyzer{
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
-	wordDict = loadDictionary(dictionaryFileName)
+	initWordDict()
 
 	inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 	nodeFilter := []ast.Node{
@@ -77,6 +79,22 @@ func run(pass *analysis.Pass) (interface{}, error) {
 func printIfError(err error) {
 	if err != nil {
 		fmt.Println(err)
+	}
+}
+
+func initWordDict() {
+	wordDict = loadDictionary(dictionaryFileName)
+	codingWordDict := loadDictionary(codingWordDictionaryFileName)
+	for codingWord, partOfSpeechDict := range codingWordDict {
+		if _, ok := wordDict[codingWord]; ok {
+			for partOfSpeech, value := range partOfSpeechDict {
+				wordDict[codingWord][partOfSpeech] = value
+			}
+		} else {
+			print(codingWord, "\n")
+
+			wordDict[codingWord] = partOfSpeechDict
+		}
 	}
 }
 
@@ -218,9 +236,9 @@ func reviewFuncDecl(pass *analysis.Pass, decl *ast.FuncDecl) {
 		return
 	}
 	words := GetWordList(name)
-
+	print(name, IsVerb(words[0]), "\n")
 	if !IsVerb(words[0]) {
-		error := NewNamingError("Function name should start with a verb")
+		error := NewNamingError("The function name should start with a verb")
 		pass.Reportf(decl.Pos(), error.Error())
 	}
 
