@@ -24,7 +24,7 @@ To define or rewrite some words, you can put `reviewCustomDict.json` in your pro
 ## Currently Implemented Rules
 ### Variable Name
 - Boolean variable names should contain verbs （ex. selected->isSelected, updatable->canUpdate）. It's desirable for them to start with verbs but it is not necessary (ex. you can use such as "userCanAccess").
--
+-Variable names that are not boolean should contain at least one noun.
 - Variable names that are not boolean should start with nouns, adjectives, or participles.
 
 - The last noun in a name of Array or Slice should be "list", "array", "slice", or plural. On the contrary, the last noun NOT in a name of Array or Slice should be singular. And you can use both for Map.
