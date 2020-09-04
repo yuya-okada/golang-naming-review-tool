@@ -2,25 +2,26 @@ package namingreview
 
 import (
 	"encoding/json"
-	"fmt"
-	pluralizePkg "github.com/gertd/go-pluralize"
 	"go/ast"
 	"go/token"
 	"go/types"
-	"golang.org/x/tools/go/analysis"
-	"golang.org/x/tools/go/analysis/passes/inspect"
-	"golang.org/x/tools/go/ast/inspector"
 	"io/ioutil"
 	"os"
 	"path"
 	"strings"
 	"unicode"
+
+	pluralizePkg "github.com/gertd/go-pluralize"
+	"golang.org/x/tools/go/analysis"
+	"golang.org/x/tools/go/analysis/passes/inspect"
+	"golang.org/x/tools/go/ast/inspector"
 )
 
 const dictionaryFileName = "dictionary.json"
 const codingWordDictionaryFileName = "coding_word_dictionary.json"
 
-const doc = "go_naming_review is ..."
+const doc = "namingreview is a static analysis tool to review the variable names, function names, and type names in your project and find out the bad practices for naming."
+
 var pluralize = pluralizePkg.NewClient()
 
 var wordDict map[string]map[string]bool
@@ -28,16 +29,18 @@ var wordDict map[string]map[string]bool
 func NewNamingError(text string) error {
 	return &NamingError{text}
 }
+
 type NamingError struct {
 	s string
 }
+
 func (e *NamingError) Error() string {
 	return e.s
 }
 
-// Analyzer is ...
+// Analyzer is a static analyzer for to review the variable names, function names, and type names.
 var Analyzer = &analysis.Analyzer{
-	Name: "go_naming_review",
+	Name: "namingreview",
 	Doc:  doc,
 	Run:  run,
 	Requires: []*analysis.Analyzer{
@@ -46,7 +49,11 @@ var Analyzer = &analysis.Analyzer{
 }
 
 func run(pass *analysis.Pass) (interface{}, error) {
-	initWordDict()
+	loadedWordDict, err := loadWordDict()
+	if err != nil {
+		return nil, err
+	}
+	wordDict = loadedWordDict
 
 	inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 	nodeFilterArray := []ast.Node{
@@ -65,7 +72,6 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 	nodeFilterArray = []ast.Node{
 		(*ast.FuncDecl)(nil),
-	//	(*ast.FuncLit)(nil),
 	}
 	inspect.Preorder(nodeFilterArray, func(n ast.Node) {
 		switch n := n.(type) {
@@ -77,15 +83,17 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	return nil, nil
 }
 
-func printIfError(err error) {
+func loadWordDict() (map[string]map[string]bool, error) {
+	wordDict, err := loadDictionary(dictionaryFileName)
 	if err != nil {
-		fmt.Println(err)
+		return nil, err
 	}
-}
 
-func initWordDict() {
-	wordDict = loadDictionary(dictionaryFileName)
-	codingWordDict := loadDictionary(codingWordDictionaryFileName)
+	codingWordDict, err := loadDictionary(codingWordDictionaryFileName)
+	if err != nil {
+		return nil, err
+	}
+
 	for codingWord, partOfSpeechDict := range codingWordDict {
 		if _, ok := wordDict[codingWord]; ok {
 			for partOfSpeech, value := range partOfSpeechDict {
@@ -98,50 +106,58 @@ func initWordDict() {
 
 	dir, err := os.Getwd()
 	if err != nil {
-		fmt.Printf("reviewCustomDict.json does not found")
-	} else {
-		customWordDict := loadDictionary(path.Join(dir, "reviewCustomDict.json"))
+		return nil, err
+	}
 
-		for customWord, partOfSpeechDict := range customWordDict {
-			if _, ok := wordDict[customWord]; ok {
-				for partOfSpeech, value := range partOfSpeechDict {
-					wordDict[customWord][partOfSpeech] = value
-				}
-			} else {
-				wordDict[customWord] = partOfSpeechDict
+	customWordDict, err := loadDictionary(path.Join(dir, "reviewCustomDict.json"))
+	if err != nil {
+		return nil, nil
+	}
+	for customWord, partOfSpeechDict := range customWordDict {
+		if _, ok := wordDict[customWord]; ok {
+			for partOfSpeech, value := range partOfSpeechDict {
+				wordDict[customWord][partOfSpeech] = value
 			}
+		} else {
+			wordDict[customWord] = partOfSpeechDict
 		}
 	}
+
+	return wordDict, nil
+
 }
 
-func loadDictionary(fileName string) map[string]map[string]bool {
+func loadDictionary(fileName string) (map[string]map[string]bool, error) {
 	jsonFile, err := os.Open(fileName)
-	printIfError(err)
+	if err != nil {
+		return nil, err
+	}
 	defer jsonFile.Close()
 
 	byteValues, err := ioutil.ReadAll(jsonFile)
-	printIfError(err)
-
+	if err != nil {
+		return nil, err
+	}
 	var words map[string]map[string]bool
 	json.Unmarshal(byteValues, &words)
-	return words
+	return words, nil
 }
 
-
 func reviewAssignStmt(pass *analysis.Pass, statement *ast.AssignStmt) {
-	if statement.Tok == token.DEFINE {
-		for _, expr := range statement.Lhs {
-			id, ok := expr.(*ast.Ident)
-			if ok {
-				error := reviewVariableName(pass, id)
-				if error != nil {
-					pass.Reportf(id.Pos(), error.Error())
-				}
+	if statement.Tok != token.DEFINE {
+		return
+	}
+	for _, expr := range statement.Lhs {
+		id, ok := expr.(*ast.Ident)
+		if ok {
+			error := reviewVariableName(pass, id)
+			if error != nil {
+				pass.Reportf(id.Pos(), error.Error())
 			}
 		}
 	}
-}
 
+}
 
 func reviewGenDecl(pass *analysis.Pass, decl *ast.GenDecl) {
 	for _, spec := range decl.Specs {
@@ -173,7 +189,7 @@ func reviewSpec(pass *analysis.Pass, spec ast.Spec) {
 	}
 }
 
-func reviewVariableName(pass *analysis.Pass,id *ast.Ident) error{
+func reviewVariableName(pass *analysis.Pass, id *ast.Ident) error {
 	if id == nil {
 		return nil
 	}
@@ -188,7 +204,7 @@ func reviewVariableName(pass *analysis.Pass,id *ast.Ident) error{
 
 	// The boolean variable name should contain a verb.
 	if obj != nil && types.Identical(obj.Type(), types.Typ[types.Bool]) {
-		containsVerb:= false
+		containsVerb := false
 		for _, word := range words {
 			if IsVerb(word) {
 				containsVerb = true
@@ -227,7 +243,7 @@ func reviewVariableName(pass *analysis.Pass,id *ast.Ident) error{
 		_, isMap := obj.Type().(*types.Map)
 		if !isMap && len(name) > 1 {
 			if isSlice || isArray {
-				if  !canBeArrayName(name) {
+				if !canBeArrayName(name) {
 					return NewNamingError("The last noun in the name of Array or Slice should be 'list', 'array', 'slice' or plural")
 				}
 			} else if !isSingularName(name) {
@@ -236,10 +252,8 @@ func reviewVariableName(pass *analysis.Pass,id *ast.Ident) error{
 		}
 	}
 
-
 	return nil
 }
-
 
 func reviewFuncDecl(pass *analysis.Pass, decl *ast.FuncDecl) {
 	if decl.Name == nil || decl.Name.Name == "" {
@@ -265,21 +279,20 @@ func reviewFuncDecl(pass *analysis.Pass, decl *ast.FuncDecl) {
 	}
 }
 
-func GetWordList(name string) []string{
+func GetWordList(name string) []string {
 
 	var words []string
 	wordStartIndex := 0
 	for i, c := range name {
-		if unicode.IsUpper(c) && i!= wordStartIndex{
+		if unicode.IsUpper(c) && i != wordStartIndex {
 			words = append(words, strings.ToLower(name[wordStartIndex:i]))
-			wordStartIndex=i
+			wordStartIndex = i
 		}
 	}
 	words = append(words, strings.ToLower(name[wordStartIndex:len(name)]))
 
 	return words
 }
-
 
 func canBeArrayName(name string) bool {
 	finalNoun := ""
@@ -288,7 +301,6 @@ func canBeArrayName(name string) bool {
 			finalNoun = word
 		}
 	}
-
 
 	if isPlural(finalNoun) {
 		return true
@@ -305,13 +317,13 @@ func isSingularName(name string) bool {
 		}
 	}
 
-	if finalNoun == "list" || finalNoun == "slice" || finalNoun == "array"{
+
+	if finalNoun == "list" || finalNoun == "slice" || finalNoun == "array" {
 		return false
-	} else{
+	} else {
 		return isSingular(finalNoun)
 	}
 }
-
 
 func IsSpecificPartOfSpeech(word string, partOfSpeech string) bool {
 	if isPlural(word) {
