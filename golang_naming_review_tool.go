@@ -116,9 +116,9 @@ func reviewGenDecl(pass *analysis.Pass, decl *ast.GenDecl) {
 }
 
 func reviewSpec(pass *analysis.Pass, spec ast.Spec) {
-	// TODO: 変数以外の場合
-	valSpec, ok := spec.(*ast.ValueSpec)
-	if ok {
+	// ValueSpec
+	valSpec, isValueSpec := spec.(*ast.ValueSpec)
+	if isValueSpec {
 		for _, id := range valSpec.Names {
 			if id.Name != "_" {
 				error := reviewVariableName(pass, id)
@@ -126,6 +126,15 @@ func reviewSpec(pass *analysis.Pass, spec ast.Spec) {
 					pass.Reportf(id.Pos(), error.Error())
 				}
 			}
+		}
+	}
+
+	// TypeSpec
+	typeSpec, isTypeSpec := spec.(*ast.TypeSpec)
+	if isTypeSpec {
+		error := reviewVariableName(pass, typeSpec.Name)
+		if error != nil {
+			pass.Reportf(typeSpec.Pos(), error.Error())
 		}
 	}
 }
@@ -143,24 +152,39 @@ func reviewVariableName(pass *analysis.Pass,id *ast.Ident) error{
 	}
 	words := GetWordList(name)
 
+	// The boolean variable name should contain a verb.
+	if obj != nil && types.Identical(obj.Type(), types.Typ[types.Bool]) {
+		containsVerb:= false
+		for _, word := range words {
+			if IsVerb(word) {
+				containsVerb = true
+			}
+		}
+		if !containsVerb {
+			return NewNamingError("The boolean variable name should start with a verb.  ex. selected->isSelected, updatable->canUpdate")
+		}
+
+		return nil
+	}
+
 	// The first word in the variable name should be a noun or an adjective
 	if !(IsNoun(words[0]) || IsAdjective(words[0])) {
-		return NewNamingError("Variable name should start with a noun or an adjective")
+		return NewNamingError("The variable name should start with a noun or an adjective")
 	}
 
 	finalNoun := ""
 	// Check variable whether name contains at least one noun
-	nounContainsNoun := false
+	containsNoun := false
 	for _, word := range words {
 		if IsNoun(word) {
-			nounContainsNoun = true
+			containsNoun = true
 			finalNoun = word
 		}
 	}
-	if !nounContainsNoun {
-		return NewNamingError("Variable name should contain at least one noun")
-	}
 
+	if !containsNoun {
+		return NewNamingError("The variable name should contain at least one noun")
+	}
 
 	// The final noun in the name of Array or Slice must be plural
 	// On the contrary, the final noun NOT in the name of Array or Slice must be singular
@@ -198,6 +222,16 @@ func reviewFuncDecl(pass *analysis.Pass, decl *ast.FuncDecl) {
 	if !IsVerb(words[0]) {
 		error := NewNamingError("Function name should start with a verb")
 		pass.Reportf(decl.Pos(), error.Error())
+	}
+
+	for _, field := range decl.Type.Params.List {
+		print(field, "\n")
+		for _, name := range field.Names {
+			error := reviewVariableName(pass, name)
+			if error != nil {
+				pass.Reportf(decl.Pos(), error.Error())
+			}
+		}
 	}
 }
 
