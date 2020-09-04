@@ -1,0 +1,13 @@
+
+{
+  "pass": {
+    "n": true
+  },
+  "inspect": {
+    "n": true
+  },
+  "pluralize": {
+    "n": true
+  }
+
+}

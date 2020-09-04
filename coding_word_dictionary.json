@@ -1,7 +1,9 @@
 {
   "ok": {"v":  true},
-  "err": {"n":  true},
+  "err": {"n":  true, "v":  true},
+  "error": {"n":  true, "v":  true},
   "has": {"v":  true},
+  "data": {"s":  true},
   "req": {"v": true, "t": true, "n": true},
   "res": {"v": true, "t": true, "n": true},
   "str": {"n": true},

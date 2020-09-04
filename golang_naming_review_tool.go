@@ -12,6 +12,9 @@ import (
 	"golang.org/x/tools/go/ast/inspector"
 	"io/ioutil"
 	"os"
+	"path"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"unicode"
 )
@@ -48,11 +51,11 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	initWordDict()
 
 	inspect := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
-	nodeFilter := []ast.Node{
+	nodeFilterArray := []ast.Node{
 		(*ast.GenDecl)(nil),
 		(*ast.AssignStmt)(nil),
 	}
-	inspect.Preorder(nodeFilter, func(n ast.Node) {
+	inspect.Preorder(nodeFilterArray, func(n ast.Node) {
 		switch n := n.(type) {
 		case *ast.GenDecl:
 			reviewGenDecl(pass, n)
@@ -62,11 +65,11 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 	})
 
-	nodeFilter = []ast.Node{
+	nodeFilterArray = []ast.Node{
 		(*ast.FuncDecl)(nil),
 	//	(*ast.FuncLit)(nil),
 	}
-	inspect.Preorder(nodeFilter, func(n ast.Node) {
+	inspect.Preorder(nodeFilterArray, func(n ast.Node) {
 		switch n := n.(type) {
 		case *ast.FuncDecl:
 			reviewFuncDecl(pass, n)
@@ -94,6 +97,20 @@ func initWordDict() {
 			wordDict[codingWord] = partOfSpeechDict
 		}
 	}
+
+	_, b, _, _ := runtime.Caller(0)
+	basePath   := filepath.Dir(b)
+	customWordDict := loadDictionary(path.Join(basePath, "reviewCustomDict.json"))
+
+	for customWord, partOfSpeechDict := range customWordDict {
+		if _, ok := wordDict[customWord]; ok {
+			for partOfSpeech, value := range partOfSpeechDict {
+				wordDict[customWord][partOfSpeech] = value
+			}
+		} else {
+			wordDict[customWord] = partOfSpeechDict
+		}
+	}
 }
 
 func loadDictionary(fileName string) map[string]map[string]bool {
@@ -101,11 +118,11 @@ func loadDictionary(fileName string) map[string]map[string]bool {
 	printIfError(err)
 	defer jsonFile.Close()
 
-	byteValue, err := ioutil.ReadAll(jsonFile)
+	byteValues, err := ioutil.ReadAll(jsonFile)
 	printIfError(err)
 
 	var words map[string]map[string]bool
-	json.Unmarshal(byteValue, &words)
+	json.Unmarshal(byteValues, &words)
 	return words
 }
 
@@ -207,12 +224,12 @@ func reviewVariableName(pass *analysis.Pass,id *ast.Ident) error{
 		_, isSlice := obj.Type().(*types.Slice)
 		_, isArray := obj.Type().(*types.Array)
 		_, isMap := obj.Type().(*types.Map)
-		if !isMap {
+		if !isMap && len(name) > 1 {
 			if isSlice || isArray {
 				if  !canBeArrayName(name) {
 					return NewNamingError("The final noun in the name of Array or Slice should be 'list', 'array', 'slice' or plural")
 				}
-			} else if canBeArrayName(name) {
+			} else if !isSingularName(name) {
 				return NewNamingError("The final noun not in the name of Array or Slice shouldn't be 'list', 'array', 'slice' or plural")
 			}
 		}
@@ -264,7 +281,6 @@ func GetWordList(name string) []string{
 
 
 func canBeArrayName(name string) bool {
-
 	finalNoun := ""
 	for _, word := range GetWordList(name) {
 		if IsNoun(word) {
@@ -279,6 +295,21 @@ func canBeArrayName(name string) bool {
 	}
 }
 
+func isSingularName(name string) bool {
+	finalNoun := ""
+	for _, word := range GetWordList(name) {
+		if IsNoun(word) {
+			finalNoun = word
+		}
+	}
+
+	if isSingular(finalNoun) {
+		return true
+	} else {
+		return finalNoun != "list" && finalNoun != "slice" && finalNoun != "array"
+	}
+}
+
 
 func IsSpecificPartOfSpeech(word string, partOfSpeech string) bool {
 	if isPlural(word) {
@@ -289,6 +320,7 @@ func IsSpecificPartOfSpeech(word string, partOfSpeech string) bool {
 	if !ok {
 		return true
 	}
+
 	_, ok = types[partOfSpeech]
 	return ok
 }
@@ -315,5 +347,10 @@ func isPlural(word string) bool {
 	return pluralize.IsPlural(word)
 }
 func isSingular(word string) bool {
+	if partOfSpeechDict, ok := wordDict[word]; ok {
+		if _, ok := partOfSpeechDict["s"]; ok {
+			return true
+		}
+	}
 	return pluralize.IsSingular(word)
 }
