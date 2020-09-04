@@ -188,13 +188,11 @@ func reviewVariableName(pass *analysis.Pass,id *ast.Ident) error{
 		return NewNamingError("The variable name should start with a noun or an adjective")
 	}
 
-	finalNoun := ""
 	// Check variable whether name contains at least one noun
 	containsNoun := false
 	for _, word := range words {
 		if IsNoun(word) {
 			containsNoun = true
-			finalNoun = word
 		}
 	}
 
@@ -211,11 +209,11 @@ func reviewVariableName(pass *analysis.Pass,id *ast.Ident) error{
 		_, isMap := obj.Type().(*types.Map)
 		if !isMap {
 			if isSlice || isArray {
-				if  !pluralize.IsPlural(finalNoun){
-					return NewNamingError("The final noun in the name of Array or Slice must be plural")
+				if  !canBeArrayName(name) {
+					return NewNamingError("The final noun in the name of Array or Slice should be 'list', 'array', 'slice' or plural")
 				}
-			} else if !pluralize.IsSingular(finalNoun) {
-				return NewNamingError("The final noun not in the name of Array or Slice must be singular")
+			} else if canBeArrayName(name) {
+				return NewNamingError("The final noun not in the name of Array or Slice shouldn't be 'list', 'array', 'slice' or plural")
 			}
 		}
 	}
@@ -265,8 +263,25 @@ func GetWordList(name string) []string{
 }
 
 
+func canBeArrayName(name string) bool {
+
+	finalNoun := ""
+	for _, word := range GetWordList(name) {
+		if IsNoun(word) {
+			finalNoun = word
+		}
+	}
+
+	if isPlural(finalNoun) {
+		return true
+	} else {
+		return finalNoun == "list" || finalNoun == "slice" || finalNoun == "array"
+	}
+}
+
+
 func IsSpecificPartOfSpeech(word string, partOfSpeech string) bool {
-	if pluralize.IsPlural(word) {
+	if isPlural(word) {
 		word = pluralize.Singular(word)
 	}
 
@@ -291,4 +306,14 @@ func IsAdjective(word string) bool {
 	return IsSpecificPartOfSpeech(word, "a") || IsVerbBareForm(word)
 }
 
-
+func isPlural(word string) bool {
+	if partOfSpeechDict, ok := wordDict[word]; ok {
+		if _, ok := partOfSpeechDict["pl"]; ok {
+			return true
+		}
+	}
+	return pluralize.IsPlural(word)
+}
+func isSingular(word string) bool {
+	return pluralize.IsSingular(word)
+}
