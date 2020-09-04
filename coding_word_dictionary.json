@@ -66,5 +66,6 @@
   "hogehoge": {"n": true},
   "cmd": {"i": true, "n": true, "t": true, "v": true},
   "db": {"n": true},
-  "col": {"n": true}
+  "col": {"n": true},
+  "ans": {"n": true}
 }

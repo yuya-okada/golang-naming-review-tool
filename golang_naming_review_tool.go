@@ -91,8 +91,6 @@ func initWordDict() {
 				wordDict[codingWord][partOfSpeech] = value
 			}
 		} else {
-			print(codingWord, "\n")
-
 			wordDict[codingWord] = partOfSpeechDict
 		}
 	}
@@ -236,14 +234,12 @@ func reviewFuncDecl(pass *analysis.Pass, decl *ast.FuncDecl) {
 		return
 	}
 	words := GetWordList(name)
-	print(name, IsVerb(words[0]), "\n")
 	if !IsVerb(words[0]) {
 		error := NewNamingError("The function name should start with a verb")
 		pass.Reportf(decl.Pos(), error.Error())
 	}
 
 	for _, field := range decl.Type.Params.List {
-		print(field, "\n")
 		for _, name := range field.Names {
 			error := reviewVariableName(pass, name)
 			if error != nil {
