@@ -218,8 +218,8 @@ func reviewVariableName(pass *analysis.Pass,id *ast.Ident) error{
 		return NewNamingError("The variable name should contain at least one noun")
 	}
 
-	// The final noun in the name of Array or Slice must be plural
-	// On the contrary, the final noun NOT in the name of Array or Slice must be singular
+	// The last noun in the name of Array or Slice must be plural
+	// On the contrary, the last noun NOT in the name of Array or Slice must be singular
 	// For the name of Map, they don't matter
 	if obj != nil {
 		_, isSlice := obj.Type().(*types.Slice)
@@ -228,10 +228,10 @@ func reviewVariableName(pass *analysis.Pass,id *ast.Ident) error{
 		if !isMap && len(name) > 1 {
 			if isSlice || isArray {
 				if  !canBeArrayName(name) {
-					return NewNamingError("The final noun in the name of Array or Slice should be 'list', 'array', 'slice' or plural")
+					return NewNamingError("The last noun in the name of Array or Slice should be 'list', 'array', 'slice' or plural")
 				}
 			} else if !isSingularName(name) {
-				return NewNamingError("The final noun not in the name of Array or Slice shouldn't be 'list', 'array', 'slice' or plural")
+				return NewNamingError("The last noun not in the name of Array or Slice shouldn't be 'list', 'array', 'slice' or plural")
 			}
 		}
 	}

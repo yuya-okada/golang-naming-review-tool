@@ -4,8 +4,8 @@ package a
 var beautifulBeautiful int	// want "The variable name should contain at least one noun"
 var eatApple =0		// want "The variable name should start with a noun or an adjective"
 
-var apple []string // want "The final noun in the name of Array or Slice should be 'list', 'array', 'slice' or plural"
-var pineapples int // want "The final noun not in the name of Array or Slice shouldn't be 'list', 'array', 'slice' or plural"
+var apple []string // want "The last noun in the name of Array or Slice should be 'list', 'array', 'slice' or plural"
+var pineapples int // want "The last noun not in the name of Array or Slice shouldn't be 'list', 'array', 'slice' or plural"
 
 var selected = true // want "The boolean variable name should start with a verb.  ex. selected->isSelected, updatable->canUpdate"
 var isSelected = true
