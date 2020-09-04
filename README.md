@@ -1,5 +1,5 @@
 
-# NamingReview
+# NamingReview fo Golang
 
 This is a static analysis tool for Golang to review the variable names, function names, and  type names in your project and find out the bad practices for naming.
 
