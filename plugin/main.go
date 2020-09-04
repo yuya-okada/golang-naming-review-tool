@@ -1,5 +1,5 @@
 // This file can build as a plugin for golangci-lint by below command.
-//    go build -buildmode=plugin -o path_to_plugin_dir github.com/yuya-okada/golang_naming_review_tool/plugin/golang_naming_review_tool
+//    go build -buildmode=plugin -o path_to_plugin_dir github.com/yuya-okada/namingreview/plugin/namingreview
 // See: https://golangci-lint.run/contributing/new-linters/#how-to-add-a-private-linter-to-golangci-lint
 
 package main
@@ -7,13 +7,13 @@ package main
 import (
 	"strings"
 
-	"github.com/yuya-okada/golang_naming_review_tool"
+	"github.com/yuya-okada/namingreview"
 	"golang.org/x/tools/go/analysis"
 )
 
 // flags for Analyzer.Flag.
 // If you would like to specify flags for your plugin, you can put them via 'ldflags' as below.
-//     $ go build -buildmode=plugin -ldflags "-X 'main.flags=-opt val'" github.com/yuya-okada/golang_naming_review_tool/plugin/golang_naming_review_tool
+//     $ go build -buildmode=plugin -ldflags "-X 'main.flags=-opt val'" github.com/yuya-okada/namingreview/plugin/namingreview
 var flags string
 
 // AnalyzerPlugin provides analyzers as a plugin.
@@ -24,13 +24,13 @@ type analyzerPlugin struct{}
 
 func (analyzerPlugin) GetAnalyzers() []*analysis.Analyzer {
 	if flags != "" {
-		flagset := golang_naming_review_tool.Analyzer.Flags
+		flagset := namingreview.Analyzer.Flags
 		if err := flagset.Parse(strings.Split(flags, " ")); err != nil {
-			panic("cannot parse flags of golang_naming_review_tool: " + err.Error())
+			panic("cannot parse flags of namingreview: " + err.Error())
 		}
 	}
 	return []*analysis.Analyzer{
-		golang_naming_review_tool.Analyzer,
+		namingreview.Analyzer,
 	}
 }
 

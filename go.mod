@@ -1,4 +1,4 @@
-module github.com/yuya-okada/golang_naming_review_tool
+module github.com/yuya-okada/namingreview
 
 go 1.15
 
